@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Functions & Security Helpers
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isMemberOfCompany(companyId) {
+      return isAuthenticated() && getUserData().companyId == companyId;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    // Tenant Isolation & RBAC rules
+    match /companies/{companyId} {
+      allow read: if isMemberOfCompany(companyId);
+      allow write: if hasRole('admin') && isMemberOfCompany(companyId);
+    }
+
+    match /importers/{importerId} {
+      allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
+      allow write: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(request.resource.data.companyId);
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && getUserData().companyId == resource.data.companyId;
+      allow write: if hasRole('admin') && isMemberOfCompany(request.resource.data.companyId);
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
+      allow write: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(request.resource.data.companyId);
+    }
+
+    match /supplierProducts/{productId} {
+      allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
+      // Allow Achats, Admin, and DG (for final stock deduction) to write
+      allow write: if (hasRole('admin') || hasRole('achats') || hasRole('dg')) && isMemberOfCompany(request.resource.data.companyId);
+    }
+
+    match /counters/{companyId} {
+      allow read: if isAuthenticated() && isMemberOfCompany(companyId);
+      allow write: if isAuthenticated() && isMemberOfCompany(companyId) && (hasRole('dg') || hasRole('admin'));
+    }
+
+    // Purchase Order Sequential workflow enforcement
+    match /purchaseOrders/{poId} {
+      allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
+      
+      // Allow creation by Achats only
+      allow create: if hasRole('achats') 
+        && isMemberOfCompany(request.resource.data.companyId)
+        && request.resource.data.status == 'PENDING_COMMERCIAL'
+        && request.resource.data.currentApprovalStep == 1
+        && request.resource.data.createdBy == request.auth.uid;
+
+      // Restrict modification after final approval
+      allow update: if isAuthenticated() 
+        && isMemberOfCompany(resource.data.companyId)
+        && resource.data.status != 'APPROVED'
+        && (
+          // Allow author to modify/resubmit if rejected
+          (resource.data.status == 'REJECTED' && hasRole('achats') && (resource.data.createdBy == request.auth.uid || resource.data.createdBy == "usr_role_achats"))
+          ||
+          // Allow Cloud Functions to update fields
+          request.auth.token.admin == true
+          ||
+          // Enforce workflow updates based on role
+          (
+            // Commercial Step 1 Approval
+            (resource.data.status == 'PENDING_COMMERCIAL' && hasRole('commercial') && request.resource.data.status == 'PENDING_JURIDIQUE' && request.resource.data.currentApprovalStep == 2) ||
+            // Juridique Step 2 Approval
+            (resource.data.status == 'PENDING_JURIDIQUE' && hasRole('juridique') && request.resource.data.status == 'PENDING_COMPTABILITE' && request.resource.data.currentApprovalStep == 3) ||
+            // Comptabilité Step 3 Approval
+            (resource.data.status == 'PENDING_COMPTABILITE' && hasRole('comptabilite') && request.resource.data.status == 'PENDING_FINANCE' && request.resource.data.currentApprovalStep == 4) ||
+            // Finance Step 4 Approval
+            (resource.data.status == 'PENDING_FINANCE' && hasRole('finance') && request.resource.data.status == 'PENDING_DG' && request.resource.data.currentApprovalStep == 5) ||
+            // DG Step 5 Approval (marks approved, triggered for background processing)
+            (resource.data.status == 'PENDING_DG' && hasRole('dg') && request.resource.data.status == 'APPROVED') ||
+            // General Rejection transition
+            (request.resource.data.status == 'REJECTED')
+          )
+        );
+
+      // Subcollection for approval logs
+      match /approvals/{stepId} {
+        allow read: if isAuthenticated() && isMemberOfCompany(get(/databases/$(database)/documents/purchaseOrders/$(poId)).data.companyId);
+        allow create: if isAuthenticated() && (
+          (stepId == '1' && hasRole('commercial')) ||
+          (stepId == '2' && hasRole('juridique')) ||
+          (stepId == '3' && hasRole('comptabilite')) ||
+          (stepId == '4' && hasRole('finance')) ||
+          (stepId == '5' && hasRole('dg'))
+        );
+      }
+
+      // Subcollection for Downstream Import Stages (Now restricted exclusively to Achats and Admin)
+      match /importTracking/{trackingId} {
+        allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
+        allow write: if isAuthenticated() && isMemberOfCompany(request.resource.data.companyId) && (
+          hasRole('admin') ||
+          (hasRole('achats') && (get(/databases/$(database)/documents/purchaseOrders/$(poId)).data.createdBy == request.auth.uid || get(/databases/$(database)/documents/purchaseOrders/$(poId)).data.createdBy == "usr_role_achats"))
+        );
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
+      allow update: if isAuthenticated() && request.resource.data.readBy.hasAll([request.auth.uid]);
+      allow create, delete: if false; // System only
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
+      allow write: if false; // System / Cloud Functions only
+    }
+  }
+}
