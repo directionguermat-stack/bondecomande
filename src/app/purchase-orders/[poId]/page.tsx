@@ -60,18 +60,42 @@ export default function PODetail() {
         element.classList.remove("hidden");
       }
 
-      const opt = {
-        margin:       10,
-        filename:     `PO_${po?.poNumber || "DRAFT"}_${mode}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      } as any;
-
       try {
         // @ts-ignore
-        const html2pdf = (await import("html2pdf.js")).default;
-        await html2pdf().from(element).set(opt).save();
+        const html2canvas = (await import("html2canvas-pro")).default;
+        // @ts-ignore
+        const { jsPDF } = await import("jspdf");
+
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        const imgWidth = 210; // A4 width in mm
+        const pageHeight = 297; // A4 height in mm
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+
+        while (heightLeft >= 0) {
+          position = heightLeft - imgHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+        }
+
+        pdf.save(`PO_${po?.poNumber || "DRAFT"}_${mode}.pdf`);
       } catch (err: any) {
         console.error("PDF generation failed:", err);
         alert("Could not generate PDF: " + (err.message || err));
