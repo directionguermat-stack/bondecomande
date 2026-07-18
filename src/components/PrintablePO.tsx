@@ -10,7 +10,9 @@ interface PrintablePOProps {
 }
 
 export default function PrintablePO({ po, supplier, approvalsHistory, printMode }: PrintablePOProps) {
-  const { products } = useAppStore();
+  const { products, importers } = useAppStore();
+  const importer = importers.find(i => i.name === po.importerDetails?.name || i.nif === po.importerDetails?.nif);
+  const companyLogoUrl = importer?.logoUrl || po.importerDetails?.logoUrl || "/logos/logo gm.jpg";
   const getApproval = (step: number) => approvalsHistory.find(h => h.step === step && h.status === "approved");
 
   const achatsApproval = approvalsHistory.find(h => h.role === "achats") || {
@@ -29,13 +31,13 @@ export default function PrintablePO({ po, supplier, approvalsHistory, printMode 
   };
 
   return (
-    <div className="hidden print:block w-[210mm] min-h-[297mm] bg-white text-black p-[15mm] text-xs font-sans leading-normal">
+    <div id="printable-po-container" className="hidden print:block w-[210mm] min-h-[297mm] bg-white text-black p-[15mm] text-xs font-sans leading-normal">
       
       {/* 1. Header Box */}
       <div className="border border-slate-400 flex mb-5 h-[35mm]">
         {/* Left Side: Logo */}
         <div className="w-1/2 flex flex-col justify-center items-center border-r border-slate-400 p-4 text-center">
-          <img src={po.importerDetails?.logoUrl || "/logos/logo gm.jpg"} alt="Company Logo" className="max-h-[30mm] max-w-full object-contain" />
+          <img src={companyLogoUrl} alt="Company Logo" className="max-h-[30mm] max-w-full object-contain" />
         </div>
         {/* Right Side: Header Info */}
         <div className="w-1/2 bg-[#1e2e3d] text-white p-4 flex flex-col justify-between">
@@ -62,6 +64,9 @@ export default function PrintablePO({ po, supplier, approvalsHistory, printMode 
           <div><strong>RC No:</strong> {po.importerDetails?.rc || "16/00-0987654B20"}</div>
           <div><strong>Address:</strong> {po.importerDetails?.address || "Alger, Algérie"}</div>
           <div><strong>Contact:</strong> {po.importerDetails?.contact || "contact@guermat.dz"}</div>
+          {(importer?.phone || po.importerDetails?.phone) && (
+            <div><strong>Tel:</strong> {importer?.phone || po.importerDetails?.phone}</div>
+          )}
         </div>
         {/* Supplier Section */}
         <div className="p-4 space-y-1">
@@ -70,7 +75,7 @@ export default function PrintablePO({ po, supplier, approvalsHistory, printMode 
           <div><strong>Address:</strong> {po.supplierDetails?.address || supplier?.bankDetails?.bankName || "Industrial Zone Area, Milan"}</div>
           <div><strong>Country of Origin:</strong> {po.supplierDetails?.country || supplier?.country || "Italy"}</div>
           <div><strong>Email:</strong> {po.supplierDetails?.email || supplier?.contactEmail || "export@valvospares.it"}</div>
-          <div><strong>Tel / Fax:</strong> {po.supplierDetails?.phone || "+39 02 123 4567"}</div>
+          <div><strong>Tel / Fax:</strong> {po.supplierDetails?.phone || supplier?.phone || "+39 02 123 4567"}</div>
         </div>
       </div>
 

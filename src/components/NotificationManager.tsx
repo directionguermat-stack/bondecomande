@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { messaging, db } from "@/lib/firebase";
 import { getToken, onMessage } from "firebase/messaging";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, query, collection, where, onSnapshot } from "firebase/firestore";
 import { Bell, X, Info, CheckCircle, AlertTriangle } from "lucide-react";
 
 export default function NotificationManager() {
@@ -69,7 +69,7 @@ export default function NotificationManager() {
     registerFcm();
   }, [currentRole, currentUserId, companyId]);
 
-  // 2. Listen for Foreground Push Notifications
+  // 2. Listen for Foreground Push Notifications (FCM Fallback)
   useEffect(() => {
     const fcmMessaging = messaging;
     if (!fcmMessaging) return;
@@ -82,17 +82,71 @@ export default function NotificationManager() {
           body: payload.notification.body || "",
           url: payload.data?.url
         });
-
-        // Auto close toast after 6 seconds
-        const timer = setTimeout(() => {
-          setToast(null);
-        }, 6000);
-        return () => clearTimeout(timer);
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  // 3. Listen for Firestore notifications for robust in-app real-time toasts
+  useEffect(() => {
+    if (!currentUserId || !currentRole) return;
+
+    const startupTime = Date.now();
+
+    const q = query(
+      collection(db, "notifications"),
+      where("companyId", "==", companyId)
+    );
+
+    const unsubscribe = onSnapshot(q, (snap) => {
+      snap.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const data = change.doc.data();
+          let createdTime = 0;
+          if (data.createdAt) {
+            if (typeof data.createdAt.toDate === "function") {
+              createdTime = data.createdAt.toDate().getTime();
+            } else {
+              createdTime = new Date(data.createdAt).getTime();
+            }
+          }
+
+          // Only notify for items created after this session loaded
+          if (createdTime > startupTime) {
+            const isRecipient = data.recipientRole === "all" || data.recipientRole === currentRole;
+            const readKey = `usr_role_${currentRole}`;
+            const alreadyRead = data.readBy && data.readBy.includes(readKey);
+
+            if (isRecipient && !alreadyRead) {
+              setToast({
+                title: data.title || "Nouvelle Notification",
+                body: data.message || "",
+                url: data.targetPath
+              });
+
+              // Play subtle audio alert if desired, or auto-dismiss
+              const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav");
+              audio.volume = 0.2;
+              audio.play().catch(() => {});
+            }
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [currentRole, currentUserId, companyId]);
+
+  // Auto close toast after 6 seconds
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => {
+        setToast(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
 
   if (!toast) return null;
 

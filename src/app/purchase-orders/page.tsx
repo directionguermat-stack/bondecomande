@@ -11,7 +11,8 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  FileText
+  FileText,
+  Download
 } from "lucide-react";
 
 export default function POList() {
@@ -26,6 +27,36 @@ export default function POList() {
     if (statusFilter !== "ALL" && po.status !== statusFilter) return false;
     return true;
   });
+
+  const handleExportCSV = () => {
+    if (filteredPOs.length === 0) return;
+    const headers = ["PO Number", "Supplier", "Importer", "Status", "Items Count", "Grand Total", "Currency", "Created At"];
+    const rows = filteredPOs.map((po) => {
+      const supplierName = suppliers.find(s => s.id === po.supplierId)?.name || "Unknown Supplier";
+      const importerName = po.importerDetails?.name || "Unknown Importer";
+      const dateStr = formatDateSafe(po.createdAt);
+      return [
+        po.poNumber || "DRAFT",
+        `"${supplierName.replace(/"/g, '""')}"`,
+        `"${importerName.replace(/"/g, '""')}"`,
+        po.status,
+        po.items.length,
+        po.totals.grandTotal.toFixed(2),
+        po.totals.currency,
+        dateStr
+      ];
+    });
+
+    const csvContent = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `PO_Archive_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -111,6 +142,15 @@ export default function POList() {
             <option value="REJECTED">Rejected</option>
           </select>
         </div>
+
+        <button
+          onClick={handleExportCSV}
+          disabled={filteredPOs.length === 0}
+          className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 bg-white px-4 py-2.5 text-xs font-bold text-slate-750 transition active:scale-95 shadow-sm w-full sm:w-auto cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Download className="h-4 w-4 text-emerald-600" />
+          <span>Export Excel/CSV</span>
+        </button>
       </div>
 
       {/* Table List Container */}

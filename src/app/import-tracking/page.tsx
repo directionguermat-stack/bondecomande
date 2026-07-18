@@ -78,7 +78,7 @@ export default function ImportTrackingList() {
   };
 
   // --- XLS EXPORT FUNCTION (FULLY STYLED ENTERPRISE EXCEL SHEET) ---
-  const exportToXLSX = (list: any[], filename = "imports_pipeline_report.xls") => {
+  const exportToXLSX = (list: any[], filename = "groupe_guermat_registry.xls") => {
     const headers = [
       "PO Number",
       "Société (Importer)",
@@ -172,7 +172,7 @@ export default function ImportTrackingList() {
         <body>
           <table>
             <tr>
-              <td colspan="24" class="title-row">SARL IMPORT ENTERPRISE REGISTRY</td>
+              <td colspan="24" class="title-row">GROUPE GUERMAT REGISTRY</td>
             </tr>
             <tr>
               <td colspan="24" class="sub-title">Exported on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} | Active Import Pipeline Tracking</td>
@@ -264,7 +264,7 @@ export default function ImportTrackingList() {
             <tr>
               <td>
                 <div class="report-title">Import Pipeline Status Report</div>
-                <div style="font-size: 11px; color: #475569; margin-top: 4px; font-weight: 500;">SARL IMPORT ENTERPRISE REGISTRY</div>
+                <div style="font-size: 11px; color: #475569; margin-top: 4px; font-weight: 500;">GROUPE GUERMAT REGISTRY</div>
               </td>
               <td class="report-meta">
                 <div>Date of Export: <strong>${new Date().toLocaleDateString()}</strong></div>
@@ -317,7 +317,7 @@ export default function ImportTrackingList() {
           </table>
 
           <div style="margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 8px; color: #94a3b8; text-align: center; font-weight: 600; letter-spacing: 0.5px;">
-            CONFIDENTIAL - FOR INTERNAL USE ONLY - GENERATED AUTOMATICALLY BY SARL IMPORT COMPLIANCE SYSTEM
+            CONFIDENTIAL - FOR INTERNAL USE ONLY - GENERATED AUTOMATICALLY BY GROUPE GUERMAT COMPLIANCE SYSTEM
           </div>
 
           <script>
@@ -440,7 +440,7 @@ export default function ImportTrackingList() {
           </div>
 
           <div style="margin-top: 50px; border-top: 1px solid #e2e8f0; padding-top: 15px; font-size: 8px; color: #94a3b8; text-align: center; font-weight: 600; letter-spacing: 0.5px;">
-            CONFIDENTIAL - FOR INTERNAL USE ONLY - GENERATED AUTOMATICALLY BY SARL IMPORT COMPLIANCE SYSTEM
+            CONFIDENTIAL - FOR INTERNAL USE ONLY - GENERATED AUTOMATICALLY BY GROUPE GUERMAT COMPLIANCE SYSTEM
           </div>
 
           <script>
@@ -480,7 +480,7 @@ export default function ImportTrackingList() {
             <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg z-25 text-xs font-semibold text-slate-700 animate-in fade-in slide-in-from-top-2 duration-150">
               <button
                 onClick={() => {
-                  exportToXLSX(filteredTrackings, "imports_pipeline_filtered.xls");
+                  exportToXLSX(filteredTrackings, "groupe_guermat_registry_filtered.xls");
                   setShowExportMenu(false);
                 }}
                 className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-slate-50 hover:text-slate-950 transition"
@@ -491,7 +491,7 @@ export default function ImportTrackingList() {
               
               <button
                 onClick={() => {
-                  exportToXLSX(trackings, "imports_pipeline_all.xls");
+                  exportToXLSX(trackings, "groupe_guermat_registry_all.xls");
                   setShowExportMenu(false);
                 }}
                 className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-slate-50 hover:text-slate-950 transition"

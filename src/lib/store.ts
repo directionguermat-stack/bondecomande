@@ -116,6 +116,7 @@ export interface PurchaseOrder {
     address: string;
     contact: string;
     logoUrl?: string;
+    phone?: string;
   };
   supplierDetails?: {
     name: string;
@@ -262,7 +263,7 @@ interface AppStore {
     items: POItem[], 
     totals: POTotals, 
     paymentTerms: string,
-    importerDetails: { name: string, nif: string, rc: string, address: string, contact: string, logoUrl?: string },
+    importerDetails: { name: string, nif: string, rc: string, address: string, contact: string, logoUrl?: string, phone?: string },
     incoterm: string,
     currency: string,
     bankName: string
@@ -383,23 +384,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
       }
     );
 
-    // Subscribe to Importers (Self-healing database if empty)
+    // Subscribe to Importers
     const unsubImporters = onSnapshot(
       query(collection(db, "importers"), where("companyId", "==", companyId)),
       async (snap) => {
-        if (snap.empty) {
-          const defaultRef = doc(collection(db, "importers"));
-          await setDoc(defaultRef, {
-            companyId,
-            name: "SARL IMPORT ALGIERS",
-            nif: "001216099023456",
-            rc: "16/00-0987654B20",
-            address: "12 Rue des Frères Bouadou, Bir Mourad Raïs, Alger",
-            contact: "contact@importalger.dz | +213 21 00 00 00",
-            createdAt: new Date().toISOString()
-          });
-          return;
-        }
         const importers = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ImporterCompany));
         set({ importers });
       }
@@ -493,7 +481,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       address: supplier?.bankDetails?.bankName || "Unknown Address",
       country: supplier?.country || "Unknown Country",
       email: supplier?.contactEmail || "Unknown Email",
-      phone: "+39 02 123 4567"
+      phone: supplier?.phone || ""
     };
 
     const newPO = {

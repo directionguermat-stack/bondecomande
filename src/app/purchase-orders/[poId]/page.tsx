@@ -13,7 +13,8 @@ import {
   MessageSquare,
   AlertTriangle,
   FileCheck,
-  Printer
+  Printer,
+  Download
 } from "lucide-react";
 import PrintablePO from "@/components/PrintablePO";
 
@@ -42,6 +43,44 @@ export default function PODetail() {
     setTimeout(() => {
       window.print();
     }, 50);
+  };
+
+  const handleDownloadPDF = (mode: "internal" | "supplier") => {
+    setPrintMode(mode);
+    
+    setTimeout(async () => {
+      const element = document.getElementById("printable-po-container");
+      if (!element) {
+        alert("Printable element not found in DOM");
+        return;
+      }
+      
+      const wasHidden = element.classList.contains("hidden");
+      if (wasHidden) {
+        element.classList.remove("hidden");
+      }
+
+      const opt = {
+        margin:       10,
+        filename:     `PO_${po?.poNumber || "DRAFT"}_${mode}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      } as any;
+
+      try {
+        // @ts-ignore
+        const html2pdf = (await import("html2pdf.js")).default;
+        await html2pdf().from(element).set(opt).save();
+      } catch (err: any) {
+        console.error("PDF generation failed:", err);
+        alert("Could not generate PDF: " + (err.message || err));
+      } finally {
+        if (wasHidden) {
+          element.classList.add("hidden");
+        }
+      }
+    }, 200);
   };
 
   const po = purchaseOrders.find(p => p.id === poId);
@@ -153,21 +192,42 @@ export default function PODetail() {
         </div>
 
         {po.status === "APPROVED" && (
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => handlePrint("internal")}
-              className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition active:scale-95 shadow-sm"
-            >
-              <Printer className="h-4 w-4 text-slate-400" />
-              <span>Version Interne (Visas)</span>
-            </button>
-            <button
-              onClick={() => handlePrint("supplier")}
-              className="flex items-center gap-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 text-xs font-semibold transition active:scale-95 shadow-sm"
-            >
-              <Printer className="h-4 w-4 text-slate-300" />
-              <span>Version Fournisseur</span>
-            </button>
+          <div className="flex flex-wrap gap-2 shrink-0">
+            {/* Internal Version Group */}
+            <div className="inline-flex rounded-lg border border-slate-200 shadow-sm overflow-hidden bg-white">
+              <button
+                onClick={() => handleDownloadPDF("internal")}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 border-r border-slate-200 transition active:scale-95 cursor-pointer"
+              >
+                <Download className="h-4 w-4 text-emerald-600 animate-pulse" />
+                <span>Download Internal (Visas)</span>
+              </button>
+              <button
+                onClick={() => handlePrint("internal")}
+                className="p-2 text-slate-500 hover:bg-slate-50 transition active:scale-95 cursor-pointer"
+                title="Print Internal"
+              >
+                <Printer className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Supplier Version Group */}
+            <div className="inline-flex rounded-lg shadow-sm overflow-hidden bg-slate-900">
+              <button
+                onClick={() => handleDownloadPDF("supplier")}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 border-r border-slate-850 transition active:scale-95 cursor-pointer"
+              >
+                <Download className="h-4 w-4 text-amber-500 animate-pulse" />
+                <span>Download Supplier</span>
+              </button>
+              <button
+                onClick={() => handlePrint("supplier")}
+                className="p-2 text-slate-300 hover:bg-slate-800 transition active:scale-95 cursor-pointer"
+                title="Print Supplier"
+              >
+                <Printer className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

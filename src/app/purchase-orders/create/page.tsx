@@ -158,7 +158,8 @@ export default function CreatePO() {
         rc: importer.rc,
         address: importer.address,
         contact: importer.contact,
-        logoUrl: importer.logoUrl
+        logoUrl: importer.logoUrl,
+        phone: importer.phone
       };
 
       // 1. Create draft PO with full metadata

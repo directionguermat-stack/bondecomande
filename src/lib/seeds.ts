@@ -13,6 +13,7 @@ export interface Supplier {
     bankName: string;
   };
   contactEmail: string;
+  phone?: string;
   createdAt: string;
 }
 
@@ -54,6 +55,7 @@ export interface ImporterCompany {
   address: string;
   contact: string;
   logoUrl?: string;
+  phone?: string;
   createdAt: string;
 }
 

@@ -27,28 +27,37 @@ service cloud.firestore {
 
     match /importers/{importerId} {
       allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
-      allow write: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(request.resource.data.companyId);
+      allow create: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(request.resource.data.companyId);
+      allow update: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(resource.data.companyId) && isMemberOfCompany(request.resource.data.companyId);
+      allow delete: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
     }
 
     match /users/{userId} {
       allow read: if isAuthenticated() && getUserData().companyId == resource.data.companyId;
-      allow write: if hasRole('admin') && isMemberOfCompany(request.resource.data.companyId);
+      // Allow user to create their own profile document during signup
+      allow create: if isAuthenticated() && request.auth.uid == userId && request.resource.data.status == 'PENDING';
+      // Only admins can approve/update user status or roles
+      allow update: if hasRole('admin') && isMemberOfCompany(resource.data.companyId) && isMemberOfCompany(request.resource.data.companyId);
+      allow delete: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
     }
 
     match /suppliers/{supplierId} {
       allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
-      allow write: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(request.resource.data.companyId);
+      allow create: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(request.resource.data.companyId);
+      allow update: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(resource.data.companyId) && isMemberOfCompany(request.resource.data.companyId);
+      allow delete: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
     }
 
     match /supplierProducts/{productId} {
       allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
-      // Allow Achats, Admin, and DG (for final stock deduction) to write
-      allow write: if (hasRole('admin') || hasRole('achats') || hasRole('dg')) && isMemberOfCompany(request.resource.data.companyId);
+      allow create: if (hasRole('achats') || hasRole('admin')) && isMemberOfCompany(request.resource.data.companyId);
+      allow update: if (hasRole('admin') || hasRole('achats') || hasRole('dg')) && isMemberOfCompany(resource.data.companyId) && isMemberOfCompany(request.resource.data.companyId);
+      allow delete: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
     }
 
     match /counters/{companyId} {
       allow read: if isAuthenticated() && isMemberOfCompany(companyId);
-      allow write: if isAuthenticated() && isMemberOfCompany(companyId) && (hasRole('dg') || hasRole('admin'));
+      allow write: if isAuthenticated() && isMemberOfCompany(companyId) && (hasRole('dg') || hasRole('admin') || hasRole('achats'));
     }
 
     // Purchase Order Sequential workflow enforcement
@@ -65,6 +74,7 @@ service cloud.firestore {
       // Restrict modification after final approval
       allow update: if isAuthenticated() 
         && isMemberOfCompany(resource.data.companyId)
+        && isMemberOfCompany(request.resource.data.companyId)
         && resource.data.status != 'APPROVED'
         && (
           // Allow author to modify/resubmit if rejected
@@ -83,12 +93,14 @@ service cloud.firestore {
             (resource.data.status == 'PENDING_COMPTABILITE' && hasRole('comptabilite') && request.resource.data.status == 'PENDING_FINANCE' && request.resource.data.currentApprovalStep == 4) ||
             // Finance Step 4 Approval
             (resource.data.status == 'PENDING_FINANCE' && hasRole('finance') && request.resource.data.status == 'PENDING_DG' && request.resource.data.currentApprovalStep == 5) ||
-            // DG Step 5 Approval (marks approved, triggered for background processing)
+            // DG Step 5 Approval (marks approved)
             (resource.data.status == 'PENDING_DG' && hasRole('dg') && request.resource.data.status == 'APPROVED') ||
             // General Rejection transition
             (request.resource.data.status == 'REJECTED')
           )
         );
+
+      allow delete: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
 
       // Subcollection for approval logs
       match /approvals/{stepId} {
@@ -102,7 +114,7 @@ service cloud.firestore {
         );
       }
 
-      // Subcollection for Downstream Import Stages (Now restricted exclusively to Achats and Admin)
+      // Subcollection for Downstream Import Stages (Restricted to Achats and Admin)
       match /importTracking/{trackingId} {
         allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
         allow write: if isAuthenticated() && isMemberOfCompany(request.resource.data.companyId) && (
@@ -114,13 +126,15 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && isMemberOfCompany(resource.data.companyId);
-      allow update: if isAuthenticated() && request.resource.data.readBy.hasAll([request.auth.uid]);
-      allow create, delete: if false; // System only
+      allow create: if isAuthenticated(); // Allow users to trigger system notifications during PO workflows
+      allow update: if isAuthenticated() && request.resource.data.readBy.hasAll(resource.data.readBy);
+      allow delete: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
     }
 
     match /auditLogs/{logId} {
       allow read: if hasRole('admin') && isMemberOfCompany(resource.data.companyId);
-      allow write: if false; // System / Cloud Functions only
+      allow create: if isAuthenticated() && isMemberOfCompany(request.resource.data.companyId); // Allow logging audit actions
+      allow update, delete: if false; // Immutable audit logs
     }
   }
 }

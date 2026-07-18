@@ -82,6 +82,7 @@ export default function DataManagement() {
   const [impAddress, setImpAddress] = useState("");
   const [impContact, setImpContact] = useState("");
   const [impLogoUrl, setImpLogoUrl] = useState("");
+  const [impPhone, setImpPhone] = useState("");
   const [editingImporterId, setEditingImporterId] = useState<string | null>(null);
 
   // Supplier Form State
@@ -93,6 +94,7 @@ export default function DataManagement() {
   const [supBankName, setSupBankName] = useState("");
   const [supIban, setIban] = useState("");
   const [supSwift, setSwift] = useState("");
+  const [supPhone, setSupPhone] = useState("");
 
   // Product Form State
   const [prodSupplierId, setProdSupplierId] = useState("");
@@ -118,6 +120,7 @@ export default function DataManagement() {
     setImpAddress("");
     setImpContact("");
     setImpLogoUrl("");
+    setImpPhone("");
 
     setSupName("");
     setSupEmail("");
@@ -125,6 +128,7 @@ export default function DataManagement() {
     setSupBankName("");
     setIban("");
     setSwift("");
+    setSupPhone("");
 
     setProdSupplierId("");
     setProdName("");
@@ -151,7 +155,8 @@ export default function DataManagement() {
           rc: impRc,
           address: impAddress,
           contact: impContact,
-          logoUrl: impLogoUrl || undefined
+          logoUrl: impLogoUrl || undefined,
+          phone: impPhone || undefined
         });
         setSuccessMsg("Importer Company profile updated successfully!");
       } else {
@@ -161,7 +166,8 @@ export default function DataManagement() {
           rc: impRc,
           address: impAddress,
           contact: impContact,
-          logoUrl: impLogoUrl || undefined
+          logoUrl: impLogoUrl || undefined,
+          phone: impPhone || undefined
         });
         setSuccessMsg("Importer Company profile created successfully!");
       }
@@ -188,6 +194,7 @@ export default function DataManagement() {
         country: supCountry,
         currency: supCurrency,
         contactEmail: supEmail,
+        phone: supPhone || undefined,
         bankDetails: {
           iban: supIban,
           swift: supSwift,
@@ -394,6 +401,16 @@ export default function DataManagement() {
                   />
                 </div>
                 <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Phone Number (Téléphone)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +213 21 00 00 00"
+                    value={impPhone}
+                    onChange={(e) => setImpPhone(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-slate-400"
+                  />
+                </div>
+                <div>
                   <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Logo (Optionnel)</label>
                   <select
                     value={impLogoUrl}
@@ -472,6 +489,16 @@ export default function DataManagement() {
                     placeholder="sales@supplier.com"
                     value={supEmail}
                     onChange={(e) => setSupEmail(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-slate-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Phone Number (Téléphone)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +39 02 123 4567"
+                    value={supPhone}
+                    onChange={(e) => setSupPhone(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 outline-none focus:border-slate-400"
                   />
                 </div>
@@ -642,6 +669,7 @@ export default function DataManagement() {
                             setImpAddress(imp.address);
                             setImpContact(imp.contact);
                             setImpLogoUrl(imp.logoUrl || "");
+                            setImpPhone(imp.phone || "");
                             setErrorMsg("");
                             setSuccessMsg("");
                           }}
@@ -656,6 +684,7 @@ export default function DataManagement() {
                       <div>RC: <span className="text-slate-800 font-bold">{imp.rc}</span></div>
                       <div>Adresse: <span className="text-slate-800">{imp.address}</span></div>
                       <div>Contact: <span className="text-slate-850 font-semibold">{imp.contact}</span></div>
+                      {imp.phone && <div>Téléphone: <span className="text-slate-850 font-semibold">{imp.phone}</span></div>}
                     </div>
                   </div>
                 ))}
@@ -673,6 +702,7 @@ export default function DataManagement() {
                     </div>
                     <div className="text-slate-500 space-y-1 text-[11px] font-medium">
                       <div>Contact Email: <span className="text-slate-800 font-semibold">{s.contactEmail}</span></div>
+                      {s.phone && <div>Téléphone: <span className="text-slate-800 font-semibold">{s.phone}</span></div>}
                       <div>Bank: <span className="text-slate-800 font-bold">{s.bankDetails?.bankName}</span> | IBAN: <span className="font-mono text-slate-700">{s.bankDetails?.iban}</span></div>
                     </div>
                   </div>
